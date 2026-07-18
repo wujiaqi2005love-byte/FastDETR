@@ -130,13 +130,32 @@ class ResNetBackbone(nn.Module):
         self.name = name
         self.out_channels = out_channels
 
-        # Load ResNet
+        # Load ResNet (handle offline mode + old/new torchvision API)
+        in_channels = [256, 512, 1024, 2048]  # C2, C3, C4, C5
+
+        def _load_resnet(fn, pretrained_flag):
+            """Load ResNet with fallback for offline / API differences."""
+            try:
+                # New torchvision API (>=0.13)
+                from torchvision.models.resnet import ResNet50_Weights
+                weights = ResNet50_Weights.IMAGENET1K_V1 if pretrained_flag else None
+                return fn(weights=weights)
+            except (ImportError, AttributeError):
+                pass
+            # Old torchvision API (<0.13) - try pretrained first,
+            # catch network errors
+            if pretrained_flag:
+                try:
+                    return fn(pretrained=True)
+                except Exception as e:
+                    print(f"[WARN] Cannot download pretrained weights: {e}")
+                    print("[WARN] Falling back to random initialization")
+            return fn(pretrained=False)
+
         if name == 'resnet50':
-            resnet = resnet50(pretrained=pretrained)
-            in_channels = [256, 512, 1024, 2048]  # C2, C3, C4, C5
+            resnet = _load_resnet(resnet50, pretrained)
         elif name == 'resnet101':
-            resnet = resnet101(pretrained=pretrained)
-            in_channels = [256, 512, 1024, 2048]
+            resnet = _load_resnet(resnet101, pretrained)
         else:
             raise ValueError(f"Unknown ResNet: {name}")
 
