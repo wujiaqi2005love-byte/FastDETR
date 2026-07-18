@@ -12,7 +12,7 @@ The loss is computed for all decoder layers (auxiliary decoding losses).
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from utils.box_ops import box_cxcywh_to_xyxy, generalized_box_iou
 
 
