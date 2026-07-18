@@ -208,27 +208,23 @@ class MSDeformableAttention(nn.Module):
         )
 
         # Compute sampling locations:
-        # sampling_locations = reference_points + sampling_offsets / spatial_shape
-        if reference_points.shape[-1] == 2:
-            # reference_points: (N_q, B, 2) → need to expand to (N_q, B, n_levels, 2)
-            # Repeat for each level
-            reference_points_expanded = reference_points.unsqueeze(2).repeat(
-                1, 1, self.n_levels, 1
-            )
-            # Add level dimension for offsets
-            offset_normalizer = spatial_shapes[:, ::-1].float()  # (n_levels, 2) in (W, H)
-            # Normalize offsets by feature map size at each level
-            sampling_locations = (
-                reference_points_expanded[:, :, :, None, :]  # (N_q, B, n_levels, 1, 2)
-                + sampling_offsets / offset_normalizer[None, None, :, None, :]
-            )
+        # sampling_locations = reference_point + sampling_offset / spatial_size
+        # sampling_offsets shape: (N_q, B, n_heads, n_levels, n_points, 2)
+        offset_normalizer = spatial_shapes[:, ::-1].float()  # (n_levels, 2) in (W,H)
+        normalized_offsets = sampling_offsets / offset_normalizer[None, None, None, :, None, :]
+
+        if reference_points.dim() == 3:
+            # Decoder-style: (N_q, B, 2) → same ref point for all levels
+            # Broadcast to (N_q, B, 1, 1, 1, 2)
+            ref = reference_points[:, :, None, None, None, :]
+        elif reference_points.dim() == 4:
+            # Encoder-style: (N_q, B, n_levels, 2) → per-level ref points
+            # Broadcast to (N_q, B, 1, n_levels, 1, 2)
+            ref = reference_points[:, :, None, :, None, :]
         else:
-            # reference_points already has n_levels dimension
-            offset_normalizer = spatial_shapes[:, ::-1].float()
-            sampling_locations = (
-                reference_points[:, :, :, None, :]
-                + sampling_offsets / offset_normalizer[None, None, :, None, :]
-            )
+            ref = reference_points
+
+        sampling_locations = ref + normalized_offsets
 
         # sampling_locations: (N_q, B, n_heads, n_levels, n_points, 2)
         # Clamp to valid range [0, 1]

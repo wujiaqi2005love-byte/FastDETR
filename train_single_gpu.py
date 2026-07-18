@@ -187,7 +187,7 @@ def train_one_epoch(
         # 前向传播
         optimizer.zero_grad()
         if scaler is not None:
-            with torch.cuda.amp.autocast():
+            with torch.amp.autocast('cuda'):
                 outputs = model(images, targets)
                 loss_dict = criterion(outputs, targets, outputs.get('dn_info'))
                 loss = sum(loss_dict.values())
