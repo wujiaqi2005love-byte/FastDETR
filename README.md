@@ -147,13 +147,31 @@ pip install -r requirements.txt
 
 ## 🏋️ Training Guide
 
-### Step 1: Download COCO Dataset
+### Step 0: 快速体验 (3分钟，无需下载数据!)
 
 ```bash
-mkdir -p data/coco
-cd data/coco
+# 合成数据训练 — 零依赖，就是玩!
+python train_quick.py --mode synthetic --epochs 10
+```
 
-# Download images and annotations from https://cocodataset.org/
+### Step 1: 小数据集训练 (VOC, 推荐!)
+
+```bash
+# 自动下载 VOC + 训练 (约 40 分钟, 仅需 2GB 磁盘)
+python train_quick.py --mode voc --epochs 30
+
+# VOC 子集快速测试 (1000 张图, 5 分钟)
+python train_quick.py --mode voc_sub --epochs 10
+
+# COCO 子集 (5000 张图, 约 20 分钟)
+python train_quick.py --mode coco_sub --max_samples 5000 --epochs 10
+```
+
+### Step 2: 完整 COCO 训练
+
+```bash
+# 下载 COCO
+mkdir -p data/coco && cd data/coco
 wget http://images.cocodataset.org/zips/train2017.zip
 wget http://images.cocodataset.org/zips/val2017.zip
 wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip
