@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FastDETR Terminal</title>
+  <link rel="stylesheet" href="/static/terminal.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><rect width=%2216%22 height=%2216%22 fill=%22%23000%22/><text x=%221%22 y=%2213%22 fill=%22%230f0%22 font-family=%22monospace%22 font-size=%2214%22>&gt;_</text></svg>">
+</head>
+<body>
+
+<!-- 扫描线效果 -->
+<div class="scanlines"></div>
+<div class="crt-flicker"></div>
+<div class="crt-bloom"></div>
+
+<!-- 主容器 -->
+<div class="terminal" id="terminal">
+
+  <!-- 头部 -->
+  <div class="terminal-header">
+    <div class="header-buttons">
+      <span class="header-btn close"></span>
+      <span class="header-btn minimize"></span>
+      <span class="header-btn maximize"></span>
+    </div>
+    <div class="header-title">root@fastdetr:~/detection (ssh)</div>
+  </div>
+
+  <!-- 终端内容区 -->
+  <div class="terminal-body" id="terminalBody">
+
+    <!-- 启动横幅 -->
+    <pre class="ascii-banner" id="banner">
+
+  ███████╗ █████╗ ███████╗████████╗██████╗ ███████╗████████╗██████╗
+  ██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗
+  █████╗  ███████║███████╗   ██║   ██║  ██║█████╗     ██║   ██████╔╝
+  ██╔══╝  ██╔══██║╚════██║   ██║   ██║  ██║██╔══╝     ██║   ██╔══██╗
+  ██║     ██║  ██║███████║   ██║   ██████╔╝███████╗   ██║   ██║  ██║
+  ╚═╝     ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═════╝ ╚══════╝   ╚═╝   ╚═╝  ╚═╝
+
+   Accelerated Detection Transformer v1.0
+   ─────────────────────────────────────────
+   > Multi-Scale Deformable Attention
+   > Contrastive Denoising Training
+   > O(HW) Encoder Complexity
+   > Dynamic Query Allocation
+   > Mixed Query Selection
+
+   Type 'help' for available commands.
+   ─────────────────────────────────────────
+    </pre>
+
+    <!-- 日志区 -->
+    <div class="log-section" id="logSection">
+      <p class="log-line"><span class="prompt">root@fastdetr:~$</span> <span class="cmd">./fastdetr --init</span></p>
+      <p class="log-line output">[BOOT] Initializing FastDETR subsystem...</p>
+      <p class="log-line output" id="statusGpu">[BOOT] Checking GPU availability...</p>
+      <p class="log-line output" id="statusModel">[BOOT] Loading model checkpoint...</p>
+      <p class="log-line output" id="statusReady" style="display:none">[OK] System ready. Awaiting input.</p>
+    </div>
+
+    <!-- 视频显示区 -->
+    <div class="video-container" id="videoContainer">
+      <div class="video-placeholder" id="videoPlaceholder">
+        <pre class="placeholder-text">
+   ┌──────────────────────────────────────────────────┐
+   │                                                  │
+   │    NO VIDEO SIGNAL                               │
+   │                                                  │
+   │    Drop video file here                          │
+   │    or type 'load /path/to/video.mp4'          │
+   │                                                  │
+   │    Supported: .mp4 .avi .mov .mkv .webm         │
+   │                                                  │
+   └──────────────────────────────────────────────────┘
+        </pre>
+        <img id="videoFeed" class="video-feed" style="display:none" alt="Detection Feed">
+      </div>
+      <div class="video-stats" id="videoStats" style="display:none">
+        <span class="stat">FPS: <span id="statFps">--</span></span>
+        <span class="stat">FRAME: <span id="statFrame">--</span></span>
+        <span class="stat">OBJECTS: <span id="statObjects">--</span></span>
+        <span class="stat">PROGRESS: <span id="statProgress">--</span>%</span>
+      </div>
+    </div>
+
+    <!-- 检测结果日志 -->
+    <div class="detection-log" id="detectionLog" style="display:none">
+      <div class="log-header">> DETECTION OUTPUT</div>
+      <div class="log-content" id="detectionLogContent"></div>
+    </div>
+
+    <!-- 输入行 -->
+    <div class="input-line" id="inputLine">
+      <span class="prompt">root@fastdetr:~$</span>
+      <input type="text" class="cmd-input" id="cmdInput"
+             placeholder="type 'help' for commands..."
+             autofocus autocomplete="off" spellcheck="false">
+    </div>
+
+    <!-- 文件拖放提示 -->
+    <div class="drop-overlay" id="dropOverlay">
+      <pre>
+   ╔══════════════════════════════════════════╗
+   ║                                          ║
+   ║     > DROP FILE TO UPLOAD_               ║
+   ║                                          ║
+   ║     Image: .jpg .png .webp              ║
+   ║     Video: .mp4 .avi .mov .mkv         ║
+   ║                                          ║
+   ╚══════════════════════════════════════════╝
+      </pre>
+    </div>
+
+    <!-- 隐藏的文件选择器 -->
+    <input type="file" id="fileInput" style="display:none"
+           accept="image/*,video/*,.mp4,.avi,.mov,.mkv,.webm">
+
+  </div>
+</div>
+
+<script src="/static/terminal.js"></script>
+</body>
+</html>

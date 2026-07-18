@@ -1,0 +1,430 @@
+/* ============================================================
+   FastDETR Terminal CSS — CRT / Hacker Style
+   ============================================================ */
+
+/* === 基础重置 === */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* === 字体 === */
+@font-face {
+  font-family: 'Terminal';
+  src: local('Courier New'), local('Consolas'), local('monospace');
+}
+
+/* === CRT 背景 === */
+body {
+  background: #0a0a0a;
+  color: #00ff41;
+  font-family: 'Courier New', 'Consolas', 'Lucida Console', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-x: hidden;
+  cursor: text;
+}
+
+/* === CRT 扫描线 === */
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* === CRT 闪烁 === */
+.crt-flicker {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  pointer-events: none;
+  z-index: 9998;
+  animation: flicker 0.05s infinite alternate;
+}
+
+@keyframes flicker {
+  0% { background: rgba(0, 0, 0, 0.02); }
+  50% { background: rgba(0, 0, 0, 0.01); }
+  100% { background: rgba(0, 0, 0, 0.03); }
+}
+
+/* === CRT 光晕 === */
+.crt-bloom {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 255, 65, 0.03) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 9997;
+}
+
+/* === 终端窗口 === */
+.terminal {
+  width: 95vw;
+  max-width: 1400px;
+  min-height: 90vh;
+  background: rgba(10, 12, 10, 0.95);
+  border: 1px solid #00ff4130;
+  border-radius: 6px;
+  box-shadow:
+    0 0 30px rgba(0, 255, 65, 0.05),
+    inset 0 0 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+/* === 终端标题栏 === */
+.terminal-header {
+  background: #0d0f0d;
+  border-bottom: 1px solid #00ff4115;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.header-btn {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid;
+}
+
+.header-btn.close {
+  background: #ff444488;
+  border-color: #ff4444;
+}
+
+.header-btn.minimize {
+  background: #ffaa0088;
+  border-color: #ffaa00;
+}
+
+.header-btn.maximize {
+  background: #00ff4188;
+  border-color: #00ff41;
+}
+
+.header-title {
+  color: #00ff4188;
+  font-size: 12px;
+  margin-left: 20px;
+}
+
+/* === 终端内容 === */
+.terminal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  position: relative;
+}
+
+.terminal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal-body::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+.terminal-body::-webkit-scrollbar-thumb {
+  background: #00ff4130;
+  border-radius: 3px;
+}
+
+/* === ASCII 横幅 === */
+.ascii-banner {
+  color: #00ff41;
+  font-size: min(1.2vw, 12px);
+  line-height: 1.2;
+  text-shadow: 0 0 5px #00ff4166;
+  margin-bottom: 20px;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* === 日志 === */
+.log-section {
+  margin-bottom: 16px;
+}
+
+.log-line {
+  margin: 2px 0;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.prompt {
+  color: #00ff41;
+  font-weight: bold;
+  text-shadow: 0 0 3px #00ff4188;
+}
+
+.cmd {
+  color: #ffffffcc;
+}
+
+.output {
+  color: #00cc33;
+}
+
+.error {
+  color: #ff4444;
+}
+
+.warn {
+  color: #ffaa00;
+}
+
+/* === 视频显示区 === */
+.video-container {
+  margin: 16px 0;
+  border: 1px solid #00ff4120;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #000000;
+  min-height: 300px;
+  position: relative;
+}
+
+.video-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 350px;
+}
+
+.placeholder-text {
+  color: #00ff4140;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  white-space: pre;
+}
+
+.video-feed {
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  display: block;
+}
+
+.video-stats {
+  background: #0a0f0a;
+  border-top: 1px solid #00ff4115;
+  padding: 8px 16px;
+  display: flex;
+  gap: 24px;
+  font-size: 12px;
+}
+
+.stat {
+  color: #00ff4188;
+}
+
+.stat span {
+  color: #00ff41;
+  font-weight: bold;
+}
+
+/* === 检测日志 === */
+.detection-log {
+  margin: 12px 0;
+  border: 1px solid #00ff4115;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.log-header {
+  background: #0a0f0a;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #00ff41;
+  border-bottom: 1px solid #00ff4115;
+}
+
+.log-content {
+  padding: 8px 12px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.log-content .detection-line {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.log-content .det-index {
+  color: #00ff4188;
+  min-width: 24px;
+}
+
+.log-content .det-class {
+  color: #00ccff;
+}
+
+.log-content .det-score {
+  color: #00ff41;
+}
+
+.log-content .det-box {
+  color: #888888;
+}
+
+/* === 输入行 === */
+.input-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 8px 0;
+  border-top: 1px solid #00ff4110;
+}
+
+.cmd-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #ffffffcc;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  caret-color: #00ff41;
+}
+
+.cmd-input::placeholder {
+  color: #00ff4130;
+}
+
+/* 闪烁光标动画 */
+@keyframes blink-caret {
+  0%, 100% { caret-color: #00ff41; }
+  50% { caret-color: transparent; }
+}
+
+.cmd-input:focus {
+  animation: blink-caret 1.2s infinite;
+}
+
+/* === 拖放浮层 === */
+.drop-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.88);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  border: 3px dashed #00ff4166;
+}
+
+.drop-overlay.active {
+  display: flex;
+}
+
+.drop-overlay pre {
+  color: #00ff41;
+  font-size: 16px;
+  text-shadow: 0 0 10px #00ff41;
+  animation: pulse 1s infinite alternate;
+  white-space: pre;
+  text-align: center;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+/* === 终端颜色 === */
+.green { color: #00ff41; }
+.cyan { color: #00ccff; }
+.yellow { color: #ffaa00; }
+.red { color: #ff4444; }
+.dim { color: #00ff4188; }
+.white { color: #ffffffcc; }
+
+/* === 动画 === */
+.fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* === 隐藏滚动条 (still scrollable) === */
+.log-content::-webkit-scrollbar {
+  width: 4px;
+}
+.log-content::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+.log-content::-webkit-scrollbar-thumb {
+  background: #00ff4120;
+}
+
+/* === 响应式 === */
+@media (max-width: 768px) {
+  .terminal {
+    width: 100vw;
+    min-height: 100vh;
+    border-radius: 0;
+    border: none;
+  }
+  .ascii-banner {
+    font-size: 8px;
+  }
+  .video-stats {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* === 全局选择颜色 === */
+::selection {
+  background: #00ff4140;
+  color: #ffffff;
+}

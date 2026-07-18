@@ -136,17 +136,184 @@ class DynamicQueryGate(nn.Module):
 ### Installation
 
 ```bash
-git clone https://github.com/yourusername/FastDETR.git
+git clone https://github.com/wujiaqi2005love-byte/FastDETR.git
 cd FastDETR
 pip install -r requirements.txt
 ```
 
-### Requirements
+> **Requirements:** Python 3.8+, PyTorch 2.0+, CUDA (recommended). See `requirements.txt` for full list.
+
+---
+
+## 🏋️ Training Guide
+
+### Step 1: Download COCO Dataset
 
 ```bash
-torch >= 2.0.0
-torchvision >= 0.15.0
-pycocotools
+mkdir -p data/coco
+cd data/coco
+
+# Download images and annotations from https://cocodataset.org/
+wget http://images.cocodataset.org/zips/train2017.zip
+wget http://images.cocodataset.org/zips/val2017.zip
+wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+
+unzip train2017.zip && unzip val2017.zip
+unzip annotations_trainval2017.zip
+```
+
+### Step 2: Single GPU Training (最简单)
+
+**直接在你的服务器上跑:**
+
+```bash
+# 基础训练 (RTX 3090 / V100, 约 6-7 小时)
+python train_single_gpu.py \
+    --coco_path ./data/coco \
+    --epochs 50 \
+    --batch_size 2 \
+    --output_dir outputs/fastdetr_r50
+
+# 如果你的 GPU 显存 ≥ 12GB:
+python train_single_gpu.py \
+    --coco_path ./data/coco \
+    --epochs 50 \
+    --batch_size 4 \
+    --output_dir outputs/fastdetr_r50
+
+# 快速测试 (仅用 100 张图, 1 epoch):
+python train_single_gpu.py \
+    --coco_path ./data/coco \
+    --epochs 1 \
+    --max_samples 100 \
+    --output_dir outputs/test
+
+# 从 checkpoint 继续训练:
+python train_single_gpu.py \
+    --coco_path ./data/coco \
+    --resume outputs/fastdetr_r50/checkpoint_epoch030.pth \
+    --epochs 80
+```
+
+### Step 3: Multi-GPU Training (DDP, 8 GPUs)
+
+```bash
+torchrun --nproc_per_node=8 train.py \
+    --config configs/fast_detr_r50.yaml \
+    --batch_size 16 \
+    --epochs 50 \
+    --output_dir outputs/fastdetr_r50_8gpu
+```
+
+### Training Tips
+
+| 显存 | 建议 batch_size | 建议 lr |
+|------|----------------|---------|
+| 6GB (RTX 2060) | 1 | 5e-5 |
+| 8GB (RTX 2070/3070) | 2 | 1e-4 |
+| 12GB+ (RTX 3090/4090) | 4 | 2e-4 |
+| 24GB+ (A100) | 8 | 2e-4 |
+
+- **混合精度**: 默认开启 (`--use_amp`)，可节省约 40% 显存
+- **学习率**: 单卡训练时 backbone LR 自动设为 transformer LR 的 1/10
+- **收敛**: 50 epoch 即可达到 45+ AP（原始 DETR 需要 500 epoch）
+
+### Evaluation
+
+```bash
+# 验证集 AP
+python eval.py \
+    --resume outputs/fastdetr_r50/best_model.pth \
+    --coco_path data/coco
+
+# 单图推理
+python -c "
+import torch
+from models.fast_detr import build_fast_detr
+model = build_fast_detr(num_classes=91)
+model.load_state_dict(torch.load('outputs/fastdetr_r50/best_model.pth')['model_state_dict'])
+"
+```
+
+---
+
+## 🖥️ Terminal-Style Web Frontend
+
+FastDETR 自带一个**终端/黑客风格**的可视化前端，支持图片/视频拖放实时目标检测。
+
+### 启动
+
+```bash
+# 使用训练好的模型
+python app/app.py --model outputs/fastdetr_r50/best_model.pth --port 5000
+
+# 使用未训练模型 (随机权重演示)
+python app/app.py --port 5000
+```
+
+浏览器打开 **http://localhost:5000**，你会看到一个 CRT 终端界面：
+
+### 功能
+
+```
+> 终端命令行交互
+    help         显示可用命令
+    load         打开文件选择器
+    detect       选择图片进行检测
+    stream       选择视频进行实时检测
+    stop         停止视频流
+    status       显示系统状态
+    stats        显示模型统计
+    clear        清屏
+
+> 拖放操作
+    直接将图片(.jpg .png)或视频(.mp4 .avi .mov)拖入终端窗口
+
+> 实时检测
+    视频逐帧处理，终端风格渲染
+    黑底绿框 + 类别标签 + 置信度输出
+```
+
+### 界面预览
+
+```
+┌──────────────────────────────────────────────┐
+│  ○ ○ ○  root@fastdetr:~/detection (ssh)      │
+├──────────────────────────────────────────────┤
+│  ███████╗ █████╗ ...  FastDETR v1.0          │
+│  ─────────────────────────────────           │
+│  root@fastdetr:~$ ./fastdetr --init          │
+│  [BOOT] GPU: NVIDIA RTX 3090 (24GB)          │
+│  [OK] System ready. Awaiting input.           │
+│                                               │
+│  ┌──────────────────────────────────────┐    │
+│  │  [person] 0.95    [car] 0.87         │    │
+│  │    ┌──────┐         ┌────┐           │    │
+│  │    │      │       ┌──┴──┐ │          │    │
+│  └──────────────────────────────────────┘    │
+│  FPS:24  FRAME:38/241  OBJECTS:3  PROG:15%   │
+│                                               │
+│  root@fastdetr:~$ █                          │
+└──────────────────────────────────────────────┘
+```
+
+### API 接口
+
+前端也可通过 API 直接调用：
+
+```bash
+# 图片检测
+curl -X POST -F "image=@photo.jpg" http://localhost:5000/api/detect_image
+
+# 视频处理
+curl -X POST -F "video=@video.mp4" http://localhost:5000/api/detect_video
+
+# 视频流 (MJPEG)
+http://localhost:5000/api/video_feed
+
+# 系统状态
+curl http://localhost:5000/api/status
+```
 numpy
 scipy
 tqdm
@@ -215,32 +382,42 @@ pred_boxes, pred_labels, pred_scores = model.predict(img)
 ```
 FastDETR/
 ├── README.md                          # This file
+├── LICENSE                            # Apache 2.0
 ├── requirements.txt                   # Dependencies
+├── setup.py                           # Installable package
 ├── configs/
 │   └── fast_detr_r50.yaml            # Training config
 ├── models/
 │   ├── __init__.py
-│   ├── backbone.py                   # ResNet/Swin + FPN neck
+│   ├── backbone.py                   # ResNet + FPN neck
 │   ├── deformable_attention.py       # MSDeformAttn core module
 │   ├── encoder.py                    # Multi-scale deformable encoder
 │   ├── decoder.py                    # Decoder with denoising + dynamic query
-│   ├── position_encoding.py          # Sine/cosine + learned position encoding
+│   ├── position_encoding.py          # 2D sine/cosine position encoding
 │   ├── matcher.py                    # Hungarian bipartite matcher
-│   ├── criterion.py                  # Set prediction loss (classification + boxes)
+│   ├── criterion.py                  # Set prediction loss + denoising loss
 │   └── fast_detr.py                  # Full FastDETR model assembly
 ├── utils/
 │   ├── __init__.py
-│   ├── box_ops.py                    # Box utilities (IoU, GIoU, box_cxcywh_to_xyxy, etc.)
-│   └── misc.py                       # NestedTensor, collate_fn, logging
+│   ├── box_ops.py                    # Box utilities (IoU, GIoU, conversions)
+│   └── misc.py                       # Distributed training, checkpoint, logging
 ├── datasets/
 │   ├── __init__.py
-│   ├── coco.py                       # COCO dataset + transforms
-│   └── transforms.py                 # Augmentation pipeline
-├── train.py                          # Training entrypoint with DDP
-├── eval.py                           # Evaluation + COCO metrics
+│   ├── coco.py                       # COCO dataset loader
+│   └── transforms.py                 # Data augmentation pipeline
+├── train.py                          # Multi-GPU training (DDP)
+├── train_single_gpu.py               # Single-GPU training (开箱即用!)
+├── eval.py                           # COCO evaluation
+├── app/                              # 🖥️ Terminal-style visualization frontend
+│   ├── app.py                        # Flask backend + video processing
+│   ├── templates/
+│   │   └── index.html                # CRT terminal UI
+│   ├── static/
+│   │   ├── terminal.css              # Terminal/CRT theme
+│   │   └── terminal.js               # Interactive frontend logic
+│   └── uploads/                      # Uploaded files
 └── experiments/
-    ├── ablation.md                   # Ablation study results
-    └── visualize.ipynb               # Attention visualization notebook
+    └── ablation.md                   # Detailed ablation study (8 dimensions)
 ```
 
 ## 🔍 Detailed Improvement Analysis
