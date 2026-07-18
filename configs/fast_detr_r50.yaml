@@ -1,0 +1,56 @@
+# FastDETR Configuration - ResNet-50 Backbone
+# This config reproduces the main results from the paper.
+
+model:
+  backbone: 'resnet50'
+  num_classes: 91
+  hidden_dim: 256
+  nheads: 8
+  num_encoder_layers: 6
+  num_decoder_layers: 6
+  num_queries: 300
+  n_points: 4
+  ffn_dim: 1024
+  dropout: 0.1
+  num_feature_levels: 4
+  pretrained_backbone: true
+
+  # Improvement flags
+  use_denoising: true            # Improvement #2: Contrastive Denoising
+  use_mixed_selection: true      # Improvement #5: Mixed Query Selection
+  use_look_forward_twice: false  # Improvement #5 (set true for best results)
+  use_dynamic_query: false       # Improvement #4 (experimental)
+
+training:
+  epochs: 50                     # Base schedule (108 for extended)
+  batch_size: 16                 # Total across all GPUs
+  lr: 0.0002                     # 2e-4 base learning rate
+  lr_backbone: 0.00002           # 2e-5 backbone LR (10x smaller for stability)
+  weight_decay: 0.0001           # 1e-4
+  lr_drop: 40                    # Epoch for LR drop (step schedule)
+  warmup_epochs: 5               # Linear warmup epochs
+  clip_max_norm: 0.1             # Gradient clipping
+  use_amp: false                 # Automatic mixed precision
+
+  # Denoising parameters
+  dn_groups: 5                   # Number of denoising groups
+  dn_noise_scale: 0.4            # Box noise std
+  dn_label_noise_ratio: 0.2      # Label flip probability
+
+loss:
+  eos_coef: 0.1                  # Background class weight
+  bbox_loss_coef: 5.0            # L1 box loss weight
+  giou_loss_coef: 2.0            # GIoU loss weight
+  focal_loss: true               # Use focal loss
+  focal_alpha: 0.25
+
+data:
+  coco_path: 'data/coco'
+  num_workers: 4
+  img_min_size: 480
+  img_max_size: 800
+  img_max_longest: 1333
+
+# For reproducing the 108-epoch results, increase:
+#   training.epochs: 108
+#   training.lr_drop: 80

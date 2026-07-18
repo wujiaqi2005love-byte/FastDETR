@@ -1,0 +1,27 @@
+# FastDETR Requirements
+# Core Framework
+torch>=2.0.0
+torchvision>=0.15.0
+
+# COCO Evaluation
+pycocotools>=2.0.6
+
+# Data Processing
+numpy>=1.21.0
+scipy>=1.7.0
+Pillow>=9.0.0
+opencv-python>=4.5.0
+
+# Utilities
+tqdm>=4.60.0
+matplotlib>=3.5.0
+PyYAML>=6.0
+yacs>=0.1.8
+
+# Optional: For better training visualization
+# tensorboard>=2.10.0
+# wandb>=0.13.0
+
+# Optional: For model analysis
+# torchinfo>=1.7.0
+# fvcore>=0.1.5
