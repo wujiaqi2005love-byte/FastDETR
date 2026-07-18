@@ -283,13 +283,28 @@ def quick_train(args):
     print(f"  验证集: {len(dataset_val)} 张")
     print(f"  类别数: {num_classes}")
 
+    def collate_batch(batch):
+        """Pad images to same size within batch."""
+        images = [item['image'] for item in batch]
+        targets = [item['target'] for item in batch]
+        max_h = max(img.shape[1] for img in images)
+        max_w = max(img.shape[2] for img in images)
+        padded = []
+        for img in images:
+            pad_h = max_h - img.shape[1]
+            pad_w = max_w - img.shape[2]
+            if pad_h > 0 or pad_w > 0:
+                img = torch.nn.functional.pad(img, (0, pad_w, 0, pad_h))
+            padded.append(img)
+        return padded, targets
+
     loader_train = DataLoader(
         dataset_train, batch_size=args.batch_size, shuffle=True,
-        num_workers=args.num_workers, collate_fn=lambda x: x,
+        num_workers=args.num_workers, collate_fn=collate_batch,
     )
     loader_val = DataLoader(
         dataset_val, batch_size=args.batch_size, shuffle=False,
-        num_workers=args.num_workers, collate_fn=lambda x: x,
+        num_workers=args.num_workers, collate_fn=collate_batch,
     )
 
     # === 构建模型 ===
@@ -337,7 +352,7 @@ def quick_train(args):
         {'params': bb_params, 'lr': args.lr * 0.1},
     ], weight_decay=1e-4)
 
-    scaler = torch.cuda.amp.GradScaler() if args.use_amp else None
+    scaler = torch.amp.GradScaler('cuda') if args.use_amp and torch.cuda.is_available() else None
 
     # === 训练 ===
     os.makedirs(args.output_dir, exist_ok=True)
@@ -354,12 +369,12 @@ def quick_train(args):
         pbar = tqdm(loader_train, desc=f'Epoch {epoch+1}/{args.epochs}',
                     ncols=100, ascii=True)
 
-        for step, batch in enumerate(pbar):
-            images = torch.stack([item['image'] for item in batch]).to(device)
+        for step, (images_list, targets_raw) in enumerate(pbar):
+            images = torch.stack(images_list).to(device)
             targets = [{
-                'boxes': item['target']['boxes'].to(device),
-                'labels': item['target']['labels'].to(device),
-            } for item in batch]
+                'boxes': t['boxes'].to(device),
+                'labels': t['labels'].to(device),
+            } for t in targets_raw]
 
             # Cosine LR with warmup
             progress = (epoch + step / len(loader_train)) / args.epochs
@@ -407,14 +422,12 @@ def quick_train(args):
         model.eval()
         val_loss = 0.0
         with torch.no_grad():
-            for batch in loader_val:
-                images = torch.stack(
-                    [item['image'] for item in batch]
-                ).to(device)
+            for images_list, targets_raw in loader_val:
+                images = torch.stack(images_list).to(device)
                 targets_val = [{
-                    'boxes': item['target']['boxes'].to(device),
-                    'labels': item['target']['labels'].to(device),
-                } for item in batch]
+                    'boxes': t['boxes'].to(device),
+                    'labels': t['labels'].to(device),
+                } for t in targets_raw]
                 outputs = model(images)
                 loss_dict = criterion(outputs, targets_val)
                 val_loss += sum(loss_dict.values()).item()

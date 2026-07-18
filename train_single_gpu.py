@@ -159,7 +159,7 @@ def train_one_epoch(
     device: torch.device,
     epoch: int,
     args,
-    scaler: Optional[torch.cuda.amp.GradScaler] = None,
+    scaler = None,
 ):
     model.train()
     total_loss = 0.0
@@ -169,13 +169,12 @@ def train_one_epoch(
     pbar = tqdm(data_loader, desc=f'Epoch {epoch+1}/{args.epochs}',
                 ncols=100, ascii=True)
 
-    for step, batch in enumerate(pbar):
-        # 手动处理 batch (list of dicts)
-        images = torch.stack([item['image'] for item in batch]).to(device)
+    for step, (images_list, targets_raw) in enumerate(pbar):
+        images = torch.stack(images_list).to(device)
         targets = [{
-            'boxes': item['target']['boxes'].to(device),
-            'labels': item['target']['labels'].to(device),
-        } for item in batch]
+            'boxes': t['boxes'].to(device),
+            'labels': t['labels'].to(device),
+        } for t in targets_raw]
 
         # 学习率
         lr = get_lr(epoch, step, total_steps,
@@ -241,12 +240,12 @@ def validate(
     total_loss = 0.0
     loss_components = {}
 
-    for batch in tqdm(data_loader, desc='Validating', ncols=80, ascii=True):
-        images = torch.stack([item['image'] for item in batch]).to(device)
+    for images_list, targets_raw in tqdm(data_loader, desc='Validating', ncols=80, ascii=True):
+        images = torch.stack(images_list).to(device)
         targets = [{
-            'boxes': item['target']['boxes'].to(device),
-            'labels': item['target']['labels'].to(device),
-        } for item in batch]
+            'boxes': t['boxes'].to(device),
+            'labels': t['labels'].to(device),
+        } for t in targets_raw]
 
         outputs = model(images)
         loss_dict = criterion(outputs, targets)
@@ -281,9 +280,8 @@ def coco_evaluate(
     model.eval()
     results = []
 
-    for batch in tqdm(data_loader, desc='COCO Eval', ncols=80, ascii=True):
-        images = torch.stack([item['image'] for item in batch]).to(device)
-        targets = [item['target'] for item in batch]
+    for images_list, targets in tqdm(data_loader, desc='COCO Eval', ncols=80, ascii=True):
+        images = torch.stack(images_list).to(device)
 
         outputs = model(images)
         probs = F.softmax(outputs['pred_logits'], dim=-1)
@@ -416,7 +414,7 @@ def main():
     ], weight_decay=args.weight_decay)
 
     # 混合精度
-    scaler = torch.cuda.amp.GradScaler() if args.use_amp else None
+    scaler = torch.amp.GradScaler('cuda') if args.use_amp and torch.cuda.is_available() else None
 
     # ========================
     # 数据
@@ -431,15 +429,30 @@ def main():
         max_samples=args.max_samples // 10 if args.max_samples else None,
     )
 
+    def collate_batch(batch):
+        """Pad images to same size within batch."""
+        images = [item['image'] for item in batch]
+        targets = [item['target'] for item in batch]
+        max_h = max(img.shape[1] for img in images)
+        max_w = max(img.shape[2] for img in images)
+        padded = []
+        for img in images:
+            pad_h = max_h - img.shape[1]
+            pad_w = max_w - img.shape[2]
+            if pad_h > 0 or pad_w > 0:
+                img = torch.nn.functional.pad(img, (0, pad_w, 0, pad_h))
+            padded.append(img)
+        return padded, targets
+
     loader_train = DataLoader(
         dataset_train, batch_size=args.batch_size, shuffle=True,
         num_workers=args.num_workers, pin_memory=(args.device == 'cuda'),
-        collate_fn=lambda x: x,
+        collate_fn=collate_batch,
     )
     loader_val = DataLoader(
         dataset_val, batch_size=args.batch_size, shuffle=False,
         num_workers=args.num_workers, pin_memory=(args.device == 'cuda'),
-        collate_fn=lambda x: x,
+        collate_fn=collate_batch,
     )
 
     print(f"  训练集: {len(dataset_train)} 张图片, {len(loader_train)} 个 batch")
