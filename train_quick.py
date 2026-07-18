@@ -182,9 +182,8 @@ class SyntheticDataset(Dataset):
             'orig_size': torch.tensor([self.img_size, self.img_size]),
         }
 
-        # PIL Image from numpy
-        from PIL import Image
-        image = Image.fromarray(bg)
+        # Convert numpy array to tensor directly (transforms expect tensors)
+        image = torch.from_numpy(bg).float().permute(2, 0, 1) / 255.0
 
         if self.transforms:
             image, target = self.transforms(image, target)

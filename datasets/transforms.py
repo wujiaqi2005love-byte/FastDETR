@@ -34,13 +34,17 @@ class RandomResize:
 
     def __call__(
         self,
-        image: torch.Tensor,
+        image,
         target: Dict,
-    ) -> Tuple[torch.Tensor, Dict]:
+    ) -> Tuple:
+        # Handle both PIL Image and tensor
+        if isinstance(image, torch.Tensor):
+            _, h, w = image.shape
+        else:
+            w, h = image.size  # PIL: (width, height)
+
         # Randomly select target size for shortest side
         target_size = random.randint(self.min_size, self.max_size)
-
-        _, h, w = image.shape
 
         # Scale so that shortest side = target_size
         scale = target_size / min(h, w)
@@ -179,12 +183,14 @@ class RandomCrop:
 
 
 class ToTensor:
-    """Convert PIL Image to tensor and normalize boxes."""
+    """Convert PIL Image or numpy array to tensor. No-op if already a tensor."""
     def __call__(
         self,
         image,
         target: Dict,
     ) -> Tuple[torch.Tensor, Dict]:
+        if isinstance(image, torch.Tensor):
+            return image, target
         image = F.to_tensor(image)
         return image, target
 
@@ -237,6 +243,7 @@ def build_transforms(
     """
     if is_train:
         transforms = [
+            ToTensor(),        # PIL/numpy -> Tensor first (everything below needs tensor)
             RandomResize(img_min_size, img_max_size, img_max_longest),
             RandomCrop(p=0.5),
             RandomHorizontalFlip(p=0.5),
@@ -244,6 +251,7 @@ def build_transforms(
         ]
     else:
         transforms = [
+            ToTensor(),        # PIL/numpy -> Tensor first
             RandomResize(img_max_size, img_max_size, img_max_longest),
             Normalize(),
         ]
